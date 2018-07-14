@@ -3,10 +3,10 @@ let
     テーブルに変換済み = Table.FromList(ソース, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
     日付列とファイル名列の準備 = Table.AddColumn(テーブルに変換済み, "区切り記号の後のテキスト", each Text.AfterDelimiter([Column1], "/", {0, RelativePosition.FromEnd}), type text),
     日付列とファイル名列に分割 = Table.SplitColumn(日付列とファイル名列の準備, "区切り記号の後のテキスト", Splitter.SplitTextByEachDelimiter({"-"}, QuoteStyle.Csv, false), {"区切り記号の後のテキスト.1", "区切り記号の後のテキスト.2"}),
-    追加されたカスタム1 = Table.AddColumn(日付列とファイル名列に分割, "日付", each if Text.Length ([区切り記号の後のテキスト.1])=6 then Text.Insert([区切り記号の後のテキスト.1],0,"20")else[区切り記号の後のテキスト.1]),
-    変更された型 = Table.TransformColumnTypes(追加されたカスタム1,{{"日付", type date}}),
-    #"名前が変更された列 " = Table.RenameColumns(変更された型,{{"Column1", "URL"}, {"区切り記号の後のテキスト.1", "日付準備"}, {"区切り記号の後のテキスト.2", "ファイル名"}}),
-    追加されたプレフィックス = Table.TransformColumns(#"名前が変更された列 ", {{"URL", each "http://www.city.yokohama.lg.jp/kodomo/unei" & _, type text}}),
-    追加されたカスタム = Table.AddColumn(追加されたプレフィックス, "CSVファイル", each Web.Contents([URL]))
+    日付列を準備 = Table.AddColumn(日付列とファイル名列に分割, "日付", each if Text.Length ([区切り記号の後のテキスト.1])=6 then Text.Insert([区切り記号の後のテキスト.1],0,"20")else[区切り記号の後のテキスト.1]),
+    日付列のデータ型を変換 = Table.TransformColumnTypes(日付列を準備,{{"日付", type date}}),
+    列名を其々変更 = Table.RenameColumns(日付列のデータ型を変換,{{"Column1", "URL"}, {"区切り記号の後のテキスト.1", "日付準備"}, {"区切り記号の後のテキスト.2", "ファイル名"}}),
+    URLにhttp以降を追加 = Table.TransformColumns(列名を其々変更, {{"URL", each "http://www.city.yokohama.lg.jp/kodomo/unei" & _, type text}}),
+    URLからバイナリ生成 = Table.AddColumn(URLにhttp以降を追加, "CSVファイル", each Web.Contents([URL]))
 in
-    追加されたカスタム
+    URLからバイナリ生成
