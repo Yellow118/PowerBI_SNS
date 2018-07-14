@@ -1,0 +1,21 @@
+let
+    ソース = Binary.From(Web.Contents("http://www.city.yokohama.lg.jp/kodomo/unei/shisetsu-joho.html")),
+    テキストで読み出し = Table.FromColumns({Lines.FromBinary(ソース,null,null,932)}),
+    フィルターされた行 = Table.SelectRows(テキストで読み出し, each Text.Contains([Column1], ">CSV</a>")),
+    区切り記号の後に挿入されたテキスト = Table.AddColumn(フィルターされた行, "区切り記号の後のテキスト", each Text.AfterDelimiter([Column1], "/", 1), type text),
+    区切り記号による列の分割 = Table.SplitColumn(区切り記号の後に挿入されたテキスト, "区切り記号の後のテキスト", Splitter.SplitTextByEachDelimiter({"-"}, QuoteStyle.Csv, false), {"区切り記号の後のテキスト.1", "区切り記号の後のテキスト.2"}),
+    変更された型 = Table.TransformColumnTypes(区切り記号による列の分割,{{"区切り記号の後のテキスト.1", type text}, {"区切り記号の後のテキスト.2", type text}}),
+    追加されたカスタム = Table.AddColumn(変更された型, "カスタム", each if 
+Text.Length ([区切り記号の後のテキスト.1])=6 
+then 
+Text.Insert([区切り記号の後のテキスト.1],0,"20")
+else
+[区切り記号の後のテキスト.1]),
+    変更された型1 = Table.TransformColumnTypes(追加されたカスタム,{{"カスタム", type date}}),
+    区切り記号の前の抽出されたテキスト = Table.TransformColumns(変更された型1, {{"区切り記号の後のテキスト.2", each Text.BeforeDelimiter(_, ">"), type text}}),
+    区切り記号の後に挿入されたテキスト1 = Table.AddColumn(区切り記号の前の抽出されたテキスト, "区切り記号の後のテキスト", each Text.AfterDelimiter([Column1], "."), type text),
+    区切り記号の前の抽出されたテキスト1 = Table.TransformColumns(区切り記号の後に挿入されたテキスト1, {{"区切り記号の後のテキスト", each Text.BeforeDelimiter(_, """"), type text}}),
+    追加されたプレフィックス = Table.TransformColumns(区切り記号の前の抽出されたテキスト1, {{"区切り記号の後のテキスト", each "http://www.city.yokohama.lg.jp/kodomo/unei" & _, type text}}),
+    追加されたカスタム1 = Table.AddColumn(追加されたプレフィックス, "カスタム.1", each Web.Contents([区切り記号の後のテキスト]))
+in
+    追加されたカスタム1
